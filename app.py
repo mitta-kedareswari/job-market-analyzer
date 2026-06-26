@@ -172,7 +172,11 @@ def check_and_refresh():
                 st.warning("⚠️ Could not fetch fresh data. Using existing data.")
 
 # ── Check and Refresh ─────────────────────────────────
-check_and_refresh()
+#check_and_refresh()
+# Load existing data directly
+if not os.path.exists("cleaned_jobs.csv"):
+    st.error("❌ No data found! Please run clean.py first.")
+    st.stop()
 
 # ── Load Data ─────────────────────────────────────────
 df = pd.read_csv("cleaned_jobs.csv")
