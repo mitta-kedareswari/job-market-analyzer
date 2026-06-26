@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # ── Load Data ────────────────────────────────────────
-df = pd.read_csv("data/cleaned_jobs.csv")
+df = pd.read_csv("cleaned_jobs.csv")
 
 # ── Title ────────────────────────────────────────────
 st.title("📊 India Job Market Trend Analyzer")
