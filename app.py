@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # ── Auto Refresh Function ─────────────────────────────
-API_KEY = "b7ef8fee4bmsh4e9cd5799d84039p1baf55jsn9696df9564e1"  
+API_KEY = "b7ef8fee4bmsh4e9cd5799d84039p1baf55jsn9696df9564e1"  # paste your key
 
 def fetch_fresh_jobs():
     url = "https://jsearch.p.rapidapi.com/search-v2"
@@ -222,3 +222,87 @@ if st.button("🔄 Force Refresh Data Now"):
     if os.path.exists("last_fetch.txt"):
         os.remove("last_fetch.txt")
     st.rerun()
+    # ── Skill Gap Analyzer ────────────────────────────────
+st.divider()
+st.subheader("🔍 Skill Gap Analyzer")
+st.markdown("**Enter your skills and see how you match the job market!**")
+
+user_input = st.text_input(
+    "Type your skills separated by commas:",
+    placeholder="e.g. Python, SQL, Excel, Power BI"
+)
+
+if user_input:
+    user_skills = [s.strip().lower() for s in user_input.split(",") if s.strip()]
+
+    all_skills = []
+    for skills in df["skills"].dropna():
+        if skills:
+            all_skills.extend([s.strip() for s in skills.split(",")])
+    top_skills = [s for s, _ in Counter(all_skills).most_common(15)]
+
+    matched = [s for s in top_skills if s.lower() in user_skills]
+    missing = [s for s in top_skills if s.lower() not in user_skills]
+
+    score = int((len(matched) / len(top_skills)) * 100)
+
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Your Match Score", f"{score}%")
+    col2.metric("✅ Skills You Have", len(matched))
+    col3.metric("❌ Skills Missing", len(missing))
+
+    st.markdown("### 📊 Your Market Readiness")
+    st.progress(score / 100)
+
+    if score >= 70:
+        st.success("🔥 Excellent! You are highly marketable!")
+    elif score >= 40:
+        st.warning("💪 Good start! Learn a few more skills to stand out.")
+    else:
+        st.error("📚 Keep learning! Focus on the missing skills below.")
+
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### ✅ Skills You Have")
+        if matched:
+            for skill in matched:
+                st.success(f"✅ {skill}")
+        else:
+            st.info("None matched yet — keep learning!")
+
+    with col2:
+        st.markdown("### ❌ Skills to Learn")
+        if missing:
+            for skill in missing:
+                st.error(f"❌ {skill}")
+        else:
+            st.balloons()
+            st.success("🎉 You have all top skills!")
+
+    st.markdown("---")
+    st.markdown("### 📚 Free Resources to Learn Missing Skills")
+
+    resources = {
+        "Python": "https://www.learnpython.org",
+        "SQL": "https://www.sqltutorial.org",
+        "Excel": "https://www.excel-easy.com",
+        "Power BI": "https://learn.microsoft.com/en-us/power-bi",
+        "Tableau": "https://www.tableau.com/learn/training",
+        "Machine Learning": "https://www.coursera.org/learn/machine-learning",
+        "AWS": "https://aws.amazon.com/training/free",
+        "Azure": "https://learn.microsoft.com/en-us/azure",
+        "Statistics": "https://www.khanacademy.org/math/statistics-probability",
+        "Spark": "https://spark.apache.org/docs/latest",
+        "Deep Learning": "https://www.deeplearning.ai",
+        "NLP": "https://www.coursera.org/learn/classification-vector-spaces-in-nlp",
+        "R": "https://www.r-project.org",
+        "Pandas": "https://pandas.pydata.org/docs/getting_started",
+        "Data Visualization": "https://www.tableau.com/learn/training"
+    }
+
+    for skill in missing[:5]:
+        if skill in resources:
+            st.markdown(f"- **{skill}** → [Free Course]({resources[skill]})")
