@@ -4,18 +4,62 @@ import plotly.express as px
 from collections import Counter
 import requests
 import os
-import json
 from datetime import datetime, timedelta
+import time
 
 # ── Page Config ──────────────────────────────────────
 st.set_page_config(
-    page_title="Job Market Analyzer",
+    page_title="India Job Market Analyzer",
     page_icon="📊",
     layout="wide"
 )
 
+# ── Skills List ───────────────────────────────────────
+skills_list = [
+    # Programming Languages
+    "Python", "Java", "JavaScript", "TypeScript", "C++", "C#",
+    "Go", "Rust", "Kotlin", "Swift", "SQL",
+    # CS Fundamentals
+    "Data Structures", "Algorithms", "DSA", "OOP",
+    "Operating Systems", "DBMS", "Computer Networks", "System Design",
+    # Web Development
+    "HTML", "CSS", "React", "Angular", "Vue.js", "Node.js",
+    "Express.js", "Next.js",
+    # Mobile Development
+    "Android", "iOS", "Flutter", "React Native",
+    # Backend Development
+    "Spring Boot", ".NET", "Django", "Flask", "FastAPI", "Laravel",
+    # Databases
+    "MySQL", "PostgreSQL", "Oracle Database", "SQL Server",
+    "MongoDB", "Redis", "Cassandra",
+    # Cloud Computing
+    "AWS", "Azure", "GCP", "Google Cloud",
+    # DevOps
+    "Git", "GitHub", "Docker", "Kubernetes", "Jenkins",
+    "Terraform", "Ansible", "CI/CD",
+    # AI & Data
+    "Machine Learning", "Deep Learning", "Generative AI",
+    "Prompt Engineering", "NLP", "Computer Vision",
+    "Data Analytics", "Data Engineering", "Data Science",
+    "Big Data", "TensorFlow", "PyTorch", "Power BI", "Tableau",
+    "Apache Spark", "Apache Kafka", "Pandas", "NumPy",
+    # Cybersecurity
+    "Network Security", "Ethical Hacking", "Penetration Testing",
+    "SOC Operations", "SIEM", "Cloud Security",
+    # Testing & QA
+    "Selenium", "Cypress", "Playwright", "JUnit", "TestNG",
+    "API Testing",
+    # APIs & Architecture
+    "REST APIs", "GraphQL", "Microservices",
+    "Event-Driven Architecture",
+    # Soft Skills
+    "Problem Solving", "Critical Thinking", "Communication",
+    "Collaboration", "Leadership", "Time Management",
+    "Adaptability", "Business Analysis"
+]
+
 # ── Auto Refresh Function ─────────────────────────────
-API_KEY = "b7ef8fee4bmsh4e9cd5799d84039p1baf55jsn9696df9564e1"  # paste your key
+API_KEY = "your_api_key_here"  # paste your key
 
 def fetch_fresh_jobs():
     url = "https://jsearch.p.rapidapi.com/search-v2"
@@ -23,56 +67,85 @@ def fetch_fresh_jobs():
         "X-RapidAPI-Key": API_KEY,
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
-    queries = [
-        "data analyst jobs in India",
-        "data scientist jobs in India",
-        "business analyst jobs in India",
-        "python developer jobs in India",
-        "machine learning engineer jobs in India"
+
+    companies = [
+        "TCS", "Infosys", "Wipro", "HCLTech", "Tech Mahindra",
+        "Accenture", "Cognizant", "Capgemini", "IBM", "Deloitte",
+        "PwC", "EY", "KPMG", "LTIMindtree", "Oracle",
+        "Microsoft", "Google", "Amazon", "Salesforce", "Adobe"
     ]
+
+    cities = [
+        "Bengaluru", "Hyderabad", "Pune", "Chennai",
+        "Gurugram", "Noida", "Mumbai", "Kochi",
+        "Ahmedabad", "Kolkata"
+    ]
+
+    roles = [
+        "Software Engineer", "Full Stack Developer",
+        "Backend Developer", "Frontend Developer",
+        "Java Developer", "Python Developer",
+        "AI Engineer", "Machine Learning Engineer",
+        "Data Scientist", "Data Analyst",
+        "Associate Software Engineer", "Junior Data Analyst",
+        "Trainee Software Engineer", "Junior Python Developer"
+    ]
+
     all_jobs = []
-    for query in queries:
-        params = {
-            "query": query,
-            "num_pages": "1",
-            "country": "in",
-            "language": "en"
-        }
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            data = response.json()
-            if "data" in data and "jobs" in data["data"]:
-                all_jobs.extend(data["data"]["jobs"])
-        except:
-            pass
+    total = 0
+    MAX = 50  # Limited during auto refresh to save API calls
+
+    for role in roles:
+        for company in companies:
+            if total >= MAX:
+                break
+            params = {
+                "query": f"{role} at {company} India",
+                "num_pages": "1",
+                "country": "in",
+                "language": "en"
+            }
+            try:
+                response = requests.get(url, headers=headers, params=params)
+                data = response.json()
+                if "data" in data and "jobs" in data["data"]:
+                    jobs = data["data"]["jobs"]
+                    filtered = [j for j in jobs if j.get("job_city") in cities]
+                    all_jobs.extend(filtered)
+                total += 1
+                time.sleep(0.5)
+            except:
+                pass
+        if total >= MAX:
+            break
     return all_jobs
 
 def clean_jobs(all_jobs):
     df = pd.DataFrame(all_jobs)
-    df = df[[
-        "job_title", "employer_name", "job_city",
-        "job_state", "job_country", "job_employment_type",
-        "job_is_remote", "job_posted_at",
-        "job_min_salary", "job_max_salary",
-        "job_salary_period", "job_description"
-    ]]
+    cols = [c for c in [
+        "job_id", "job_title", "employer_name",
+        "job_city", "job_state", "job_country",
+        "job_employment_type", "job_is_remote",
+        "job_posted_at", "job_min_salary",
+        "job_max_salary", "job_salary_period",
+        "job_description", "job_apply_link"
+    ] if c in df.columns]
+    df = df[cols]
     df["job_is_remote"] = df["job_is_remote"].fillna(False)
-    df["avg_salary"] = (df["job_min_salary"] + df["job_max_salary"]) / 2
-
-    skills_list = [
-        "Python", "SQL", "Excel", "Power BI", "Tableau",
-        "Machine Learning", "R", "Spark", "AWS", "Azure",
-        "Pandas", "NumPy", "TensorFlow", "Keras", "Statistics",
-        "Data Visualization", "Deep Learning", "NLP"
-    ]
+    df["avg_salary"] = (
+        df.get("job_min_salary", 0) + df.get("job_max_salary", 0)
+    ) / 2
 
     def extract_skills(description):
         if pd.isna(description):
             return ""
-        return ", ".join([s for s in skills_list if s.lower() in description.lower()])
+        return ", ".join([
+            s for s in skills_list
+            if s.lower() in description.lower()
+        ])
 
     df["skills"] = df["job_description"].apply(extract_skills)
-    df = df.drop(columns=["job_description"])
+    df = df.drop(columns=["job_description"], errors="ignore")
     return df
 
 def check_and_refresh():
@@ -90,6 +163,7 @@ def check_and_refresh():
             jobs = fetch_fresh_jobs()
             if jobs:
                 df = clean_jobs(jobs)
+                df = df.drop_duplicates(subset=["job_id"]) if "job_id" in df.columns else df
                 df.to_csv("cleaned_jobs.csv", index=False)
                 with open(last_fetch_file, "w") as f:
                     f.write(datetime.now().isoformat())
@@ -97,13 +171,13 @@ def check_and_refresh():
             else:
                 st.warning("⚠️ Could not fetch fresh data. Using existing data.")
 
-# ── Check and Refresh Data ────────────────────────────
+# ── Check and Refresh ─────────────────────────────────
 check_and_refresh()
 
 # ── Load Data ─────────────────────────────────────────
 df = pd.read_csv("cleaned_jobs.csv")
 
-# Show last updated time
+# Last updated
 if os.path.exists("last_fetch.txt"):
     with open("last_fetch.txt", "r") as f:
         last_fetch = datetime.fromisoformat(f.read().strip())
@@ -111,7 +185,7 @@ if os.path.exists("last_fetch.txt"):
 
 # ── Title ─────────────────────────────────────────────
 st.title("📊 India Job Market Trend Analyzer")
-st.markdown("**Real-time insights from live job postings**")
+st.markdown("**Real-time insights from top companies across major Indian cities**")
 st.divider()
 
 # ── Top Metrics ───────────────────────────────────────
@@ -123,12 +197,45 @@ col4.metric("Remote Jobs", int(df["job_is_remote"].sum()))
 
 st.divider()
 
+# ── Sidebar Filters ───────────────────────────────────
+st.sidebar.title("🔎 Filters")
+
+city_filter = st.sidebar.multiselect(
+    "🏙️ Select Cities",
+    options=sorted(df["job_city"].dropna().unique().tolist()),
+    default=[]
+)
+
+company_filter = st.sidebar.multiselect(
+    "🏢 Select Companies",
+    options=sorted(df["employer_name"].dropna().unique().tolist()),
+    default=[]
+)
+
+remote_filter = st.sidebar.selectbox(
+    "🏠 Job Type",
+    ["All", "Remote", "On-Site"]
+)
+
+# Apply filters
+filtered = df.copy()
+if city_filter:
+    filtered = filtered[filtered["job_city"].isin(city_filter)]
+if company_filter:
+    filtered = filtered[filtered["employer_name"].isin(company_filter)]
+if remote_filter == "Remote":
+    filtered = filtered[filtered["job_is_remote"] == True]
+elif remote_filter == "On-Site":
+    filtered = filtered[filtered["job_is_remote"] == False]
+
+st.sidebar.markdown(f"**Showing {len(filtered)} of {len(df)} jobs**")
+
 # ── Row 1: Cities + Companies ─────────────────────────
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🏙️ Top Cities Hiring")
-    city_data = df["job_city"].value_counts().head(10).reset_index()
+    city_data = filtered["job_city"].value_counts().head(10).reset_index()
     city_data.columns = ["City", "Jobs"]
     fig = px.bar(city_data, x="Jobs", y="City",
                  orientation="h", color="Jobs",
@@ -138,7 +245,7 @@ with col1:
 
 with col2:
     st.subheader("🏢 Top Hiring Companies")
-    company_data = df["employer_name"].value_counts().head(10).reset_index()
+    company_data = filtered["employer_name"].value_counts().head(10).reset_index()
     company_data.columns = ["Company", "Jobs"]
     fig = px.bar(company_data, x="Jobs", y="Company",
                  orientation="h", color="Jobs",
@@ -154,7 +261,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("🔥 Top In-Demand Skills")
     all_skills = []
-    for skills in df["skills"].dropna():
+    for skills in filtered["skills"].dropna():
         if skills:
             all_skills.extend([s.strip() for s in skills.split(",")])
     skill_counts = Counter(all_skills).most_common(15)
@@ -167,7 +274,7 @@ with col1:
 
 with col2:
     st.subheader("🏠 Remote vs On-Site")
-    remote_df = df["job_is_remote"].map({True: "Remote", False: "On-Site"})
+    remote_df = filtered["job_is_remote"].map({True: "Remote", False: "On-Site"})
     remote_counts = remote_df.value_counts().reset_index()
     remote_counts.columns = ["Type", "Count"]
     fig = px.pie(remote_counts, names="Type", values="Count",
@@ -178,7 +285,7 @@ st.divider()
 
 # ── Row 3: State wise jobs ────────────────────────────
 st.subheader("🗺️ Jobs by State")
-state_data = df["job_state"].value_counts().reset_index()
+state_data = filtered["job_state"].value_counts().reset_index()
 state_data.columns = ["State", "Jobs"]
 fig = px.bar(state_data, x="State", y="Jobs",
              color="Jobs", color_continuous_scale="Purples")
@@ -186,29 +293,8 @@ st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
 
-# ── Row 4: Job Listings Table ─────────────────────────
+# ── Job Listings Table ────────────────────────────────
 st.subheader("📋 All Job Listings")
-
-col1, col2 = st.columns(2)
-with col1:
-    city_filter = st.selectbox(
-        "Filter by City",
-        ["All"] + sorted(df["job_city"].dropna().unique().tolist())
-    )
-with col2:
-    remote_filter = st.selectbox(
-        "Filter by Type",
-        ["All", "Remote", "On-Site"]
-    )
-
-filtered = df.copy()
-if city_filter != "All":
-    filtered = filtered[filtered["job_city"] == city_filter]
-if remote_filter == "Remote":
-    filtered = filtered[filtered["job_is_remote"] == True]
-elif remote_filter == "On-Site":
-    filtered = filtered[filtered["job_is_remote"] == False]
-
 st.dataframe(
     filtered[["job_title", "employer_name", "job_city",
               "job_state", "job_is_remote", "skills"]],
@@ -216,35 +302,36 @@ st.dataframe(
 )
 st.caption(f"Showing {len(filtered)} of {len(df)} jobs")
 
-# ── Manual Refresh Button ─────────────────────────────
 st.divider()
+
+# ── Manual Refresh Button ─────────────────────────────
 if st.button("🔄 Force Refresh Data Now"):
     if os.path.exists("last_fetch.txt"):
         os.remove("last_fetch.txt")
     st.rerun()
-    # ── Skill Gap Analyzer ────────────────────────────────
+
 st.divider()
+
+# ── Skill Gap Analyzer ────────────────────────────────
 st.subheader("🔍 Skill Gap Analyzer")
 st.markdown("**Enter your skills and see how you match the job market!**")
 
 user_input = st.text_input(
     "Type your skills separated by commas:",
-    placeholder="e.g. Python, SQL, Excel, Power BI"
+    placeholder="e.g. Python, SQL, React, Docker"
 )
 
 if user_input:
     user_skills = [s.strip().lower() for s in user_input.split(",") if s.strip()]
-
     all_skills = []
-    for skills in df["skills"].dropna():
+    for skills in filtered["skills"].dropna():
         if skills:
             all_skills.extend([s.strip() for s in skills.split(",")])
     top_skills = [s for s, _ in Counter(all_skills).most_common(15)]
 
     matched = [s for s in top_skills if s.lower() in user_skills]
     missing = [s for s in top_skills if s.lower() not in user_skills]
-
-    score = int((len(matched) / len(top_skills)) * 100)
+    score = int((len(matched) / len(top_skills)) * 100) if top_skills else 0
 
     st.markdown("---")
     col1, col2, col3 = st.columns(3)
@@ -284,30 +371,35 @@ if user_input:
 
     st.markdown("---")
     st.markdown("### 📚 Free Resources to Learn Missing Skills")
-
     resources = {
         "Python": "https://www.learnpython.org",
         "SQL": "https://www.sqltutorial.org",
-        "Excel": "https://www.excel-easy.com",
-        "Power BI": "https://learn.microsoft.com/en-us/power-bi",
-        "Tableau": "https://www.tableau.com/learn/training",
-        "Machine Learning": "https://www.coursera.org/learn/machine-learning",
+        "Java": "https://www.learnjavaonline.org",
+        "JavaScript": "https://javascript.info",
+        "React": "https://react.dev/learn",
+        "Docker": "https://docs.docker.com/get-started",
+        "Kubernetes": "https://kubernetes.io/docs/tutorials",
         "AWS": "https://aws.amazon.com/training/free",
         "Azure": "https://learn.microsoft.com/en-us/azure",
-        "Statistics": "https://www.khanacademy.org/math/statistics-probability",
-        "Spark": "https://spark.apache.org/docs/latest",
+        "Machine Learning": "https://www.coursera.org/learn/machine-learning",
         "Deep Learning": "https://www.deeplearning.ai",
-        "NLP": "https://www.coursera.org/learn/classification-vector-spaces-in-nlp",
-        "R": "https://www.r-project.org",
-        "Pandas": "https://pandas.pydata.org/docs/getting_started",
-        "Data Visualization": "https://www.tableau.com/learn/training"
+        "Power BI": "https://learn.microsoft.com/en-us/power-bi",
+        "Tableau": "https://www.tableau.com/learn/training",
+        "Git": "https://learngitbranching.js.org",
+        "MongoDB": "https://learn.mongodb.com",
+        "PostgreSQL": "https://www.postgresqltutorial.com",
+        "TypeScript": "https://www.typescriptlang.org/docs",
+        "Node.js": "https://nodejs.org/en/learn",
+        "Spring Boot": "https://spring.io/guides",
+        "Flutter": "https://flutter.dev/learn"
     }
-
     for skill in missing[:5]:
         if skill in resources:
             st.markdown(f"- **{skill}** → [Free Course]({resources[skill]})")
-            # ── Job Recommender ───────────────────────────────────
+
 st.divider()
+
+# ── Job Recommender ───────────────────────────────────
 st.subheader("🎯 Job Recommender")
 st.markdown("**Find jobs that match your skills!**")
 
@@ -324,16 +416,13 @@ if recommend_input:
         if pd.isna(job_skills) or job_skills == "":
             return 0
         job_skill_list = [s.strip().lower() for s in job_skills.split(",")]
-        if len(job_skill_list) == 0:
+        if not job_skill_list:
             return 0
         matched = sum(1 for s in job_skill_list if s in user_skills)
         return int((matched / len(job_skill_list)) * 100)
 
-    # Calculate match for each job
-    df["match_%"] = df["skills"].apply(calculate_match)
-
-    # Filter jobs with at least some match
-    recommended = df[df["match_%"] > 0].sort_values(
+    filtered["match_%"] = filtered["skills"].apply(calculate_match)
+    recommended = filtered[filtered["match_%"] > 0].sort_values(
         "match_%", ascending=False
     ).head(10)
 
@@ -345,16 +434,11 @@ if recommend_input:
 
         for i, row in recommended.iterrows():
             match = row["match_%"]
+            color = "🟢" if match >= 70 else "🟡" if match >= 40 else "🔴"
 
-            # Color based on match
-            if match >= 70:
-                color = "🟢"
-            elif match >= 40:
-                color = "🟡"
-            else:
-                color = "🔴"
-
-            with st.expander(f"{color} {match}% Match — {row['job_title']} at {row['employer_name']}"):
+            with st.expander(
+                f"{color} {match}% Match — {row['job_title']} at {row['employer_name']}"
+            ):
                 col1, col2 = st.columns(2)
                 with col1:
                     st.markdown(f"**🏢 Company:** {row['employer_name']}")
