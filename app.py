@@ -306,3 +306,62 @@ if user_input:
     for skill in missing[:5]:
         if skill in resources:
             st.markdown(f"- **{skill}** → [Free Course]({resources[skill]})")
+            # ── Job Recommender ───────────────────────────────────
+st.divider()
+st.subheader("🎯 Job Recommender")
+st.markdown("**Find jobs that match your skills!**")
+
+recommend_input = st.text_input(
+    "Enter your skills to find matching jobs:",
+    placeholder="e.g. Python, SQL, Power BI",
+    key="recommend_input"
+)
+
+if recommend_input:
+    user_skills = [s.strip().lower() for s in recommend_input.split(",") if s.strip()]
+
+    def calculate_match(job_skills):
+        if pd.isna(job_skills) or job_skills == "":
+            return 0
+        job_skill_list = [s.strip().lower() for s in job_skills.split(",")]
+        if len(job_skill_list) == 0:
+            return 0
+        matched = sum(1 for s in job_skill_list if s in user_skills)
+        return int((matched / len(job_skill_list)) * 100)
+
+    # Calculate match for each job
+    df["match_%"] = df["skills"].apply(calculate_match)
+
+    # Filter jobs with at least some match
+    recommended = df[df["match_%"] > 0].sort_values(
+        "match_%", ascending=False
+    ).head(10)
+
+    if len(recommended) == 0:
+        st.warning("⚠️ No matching jobs found. Try adding more skills!")
+    else:
+        st.success(f"🎉 Found {len(recommended)} matching jobs for you!")
+        st.markdown("---")
+
+        for i, row in recommended.iterrows():
+            match = row["match_%"]
+
+            # Color based on match
+            if match >= 70:
+                color = "🟢"
+            elif match >= 40:
+                color = "🟡"
+            else:
+                color = "🔴"
+
+            with st.expander(f"{color} {match}% Match — {row['job_title']} at {row['employer_name']}"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"**🏢 Company:** {row['employer_name']}")
+                    st.markdown(f"**📍 Location:** {row['job_city']}, {row['job_state']}")
+                    st.markdown(f"**💼 Type:** {row['job_employment_type']}")
+                    st.markdown(f"**🏠 Remote:** {'Yes' if row['job_is_remote'] else 'No'}")
+                with col2:
+                    st.markdown(f"**🛠️ Required Skills:** {row['skills']}")
+                    st.progress(match / 100)
+                    st.markdown(f"**Match Score: {match}%**")
