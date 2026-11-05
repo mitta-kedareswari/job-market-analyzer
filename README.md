@@ -103,9 +103,8 @@ pip install -r requirements.txt
 ```
 
 ### 4. Add your API key
-Open `fetch_jobs.py` and replace:
 ```python
-API_KEY = "your_api_key_here"
+API_KEY = "b7ef8fee4bmsh4e9cd5799d84039p1baf55jsn9696df9564e1" 
 ```
 
 ### 5. Fetch fresh data
